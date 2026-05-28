@@ -10,5 +10,9 @@ public class Constants {
             public static final double turnP = 0;
             public static final double turnI = 0;
             public static final double turnD = 0;
+
+            public static final double momentOfInertia = 0;
+            public static final double gearing = 3.0;
+            
     }
 }
