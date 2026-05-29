@@ -1,5 +1,7 @@
 package frc.swerve;
 
+import java.util.function.DoubleSupplier;
+
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
@@ -38,6 +40,10 @@ public class SwerveModuleSim {
             turnGearBox
         );
         // driveGearBox.getVoltage(driveMotor.getTorqueNewtonMeters(), driveMotor.getAngularVelocityRadPerSec()), driveGearBox.getCurrent(driveMotor.getTorqueNewtonMeters())
+    }
+
+    public void s(DoubleSupplier d) {
+
     }
 
 }
