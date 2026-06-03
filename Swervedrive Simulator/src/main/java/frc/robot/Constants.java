@@ -12,7 +12,8 @@ public class Constants {
             public static final double turnD = 0;
 
             public static final double momentOfInertia = 0;
-            public static final double gearing = 3.0;
-            
+            public static final double driveGearRatio = 6.12;
+            public static final double turnGearRatio = 150.0 / 7;
+            public static final double wheelRadiusMeters = 10;
     }
 }

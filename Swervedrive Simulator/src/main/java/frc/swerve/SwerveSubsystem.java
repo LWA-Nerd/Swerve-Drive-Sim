@@ -4,7 +4,8 @@ import edu.wpi.first.wpilibj2.command.SubsystemBase;
 
 public class SwerveSubsystem extends SubsystemBase{
 
-    private SwerveModuleSim[] modules = {new SwerveModuleSim("fl"), new SwerveModuleSim("fr"), new SwerveModuleSim("bl"), new SwerveModuleSim("br")};
+    private SwerveModuleSim[] modules = {new SwerveModuleSim("fl"), new SwerveModuleSim("fr"), 
+    new SwerveModuleSim("bl"), new SwerveModuleSim("br")};
     
     private DriveStates currentState = DriveStates.IDLE;
     
