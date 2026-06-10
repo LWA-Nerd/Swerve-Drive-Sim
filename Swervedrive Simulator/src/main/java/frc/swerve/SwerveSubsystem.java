@@ -4,6 +4,7 @@ import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.DoubleSupplier;
 
+import frc.swerve.SwerveModuleSim;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
@@ -64,34 +65,30 @@ public class SwerveDrive extends SubsystemBase {
 
     public SwerveDrive(
             GyroIO gyroIO,
-            SDSModuleIO flModuleIO,
-            SDSModuleIO frModuleIO,
-            SDSModuleIO blModuleIO,
-            SDSModuleIO brModuleIO
+
     ) {
         this.gyroIO = gyroIO;
-        this.gyroIOInputs = new GyroIOInputsAutoLogged();
 
         toCrossbuck = true;
 
-        modules = new SDSSwerveModule[] {
-                new SDSSwerveModule("Module 0", flModuleIO),
-                new SDSSwerveModule("Module 1", frModuleIO),
-                new SDSSwerveModule("Module 2", blModuleIO),
-                new SDSSwerveModule("Module 3", brModuleIO)
+        SwerveModuleSim[] modules = new SwerveModuleSim[] {
+                new SwerveModuleSim("fl"),
+                new SwerveModuleSim("fr"),
+                new SwerveModuleSim("bl"),
+                new SwerveModuleSim("br")
         };
 
         kinematics = new SwerveDriveKinematics(
-                new Translation2d( SwerveConstants.kWheelDistanceMetersX / 2,  SwerveConstants.kWheelDistanceMetersY / 2),
-                new Translation2d( SwerveConstants.kWheelDistanceMetersX / 2, -SwerveConstants.kWheelDistanceMetersY / 2),
-                new Translation2d(-SwerveConstants.kWheelDistanceMetersX / 2,  SwerveConstants.kWheelDistanceMetersY / 2),
-                new Translation2d(-SwerveConstants.kWheelDistanceMetersX / 2, -SwerveConstants.kWheelDistanceMetersY / 2)
+                new Translation2d( Constants.kWheelDistanceMetersX / 2,  Constants.kWheelDistanceMetersY / 2),
+                new Translation2d( Constants.kWheelDistanceMetersX / 2, -Constants.kWheelDistanceMetersY / 2),
+                new Translation2d(-Constants.kWheelDistanceMetersX / 2,  Constants.kWheelDistanceMetersY / 2),
+                new Translation2d(-Constants.kWheelDistanceMetersX / 2, -Constants.kWheelDistanceMetersY / 2)
         );
 
         rawGyroRotation = new Rotation2d();
         modulePositions = Arrays.stream(modules).map(module -> module.getPosition()).toArray(SwerveModulePosition[]::new);
 
-        poseEstimator = new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, modulePositions, SwerveConstants.getInitialPose());
+        poseEstimator = new SwerveDrivePoseEstimator(kinematics, rawGyroRotation, modulePositions, Constants.getInitialPose());
 
         aimHubFlag = new AtomicBoolean(false);
 

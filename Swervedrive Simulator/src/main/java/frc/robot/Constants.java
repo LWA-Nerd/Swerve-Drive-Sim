@@ -34,11 +34,6 @@ public class Constants {
 
             public static final double crossbuckDelaySeconds = .3;
 
-            public static final double kMaxWheelSpeed = 20; // m/s?
-            public static final double kMagVelLimit = 5.7; // m/s
-            public static final double kRotVelLimit = 2 * (2 * Math.PI); // rad/s
 
-
-        
     }
 }
