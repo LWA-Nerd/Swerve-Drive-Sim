@@ -35,6 +35,5 @@ public class Constants {
             public static final double crossbuckDelaySeconds = .3;
 
 
-        
     }
 }
