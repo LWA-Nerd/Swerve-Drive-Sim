@@ -6,7 +6,7 @@ import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.system.plant.LinearSystemId;
 import edu.wpi.first.wpilibj.simulation.DCMotorSim;
-import frc.robot.Constants.DriveConstants;
+import frc.robot.Constants.SwerveModuleConstants;
 
 // sim based on the advantagekit 2026 swerve example
 public class SDSModuleIOSim implements SDSModuleIO {
@@ -20,14 +20,14 @@ public class SDSModuleIOSim implements SDSModuleIO {
     private boolean turnClosedLoop = false;
 
     private PIDController driveController = new PIDController(
-        DriveConstants.driveP,
-        DriveConstants.driveI,
-        DriveConstants.driveD
+        SwerveModuleConstants.driveSimP,
+        SwerveModuleConstants.driveSimI,
+        SwerveModuleConstants.driveSimD
     );
     private PIDController turnController = new PIDController(
-        DriveConstants.turnP,
-        DriveConstants.turnI,
-        DriveConstants.turnD
+        SwerveModuleConstants.turnSimP,
+        SwerveModuleConstants.turnSimI,
+        SwerveModuleConstants.turnSimD
     );
 
     // to be updated by sim
@@ -95,7 +95,7 @@ public class SDSModuleIOSim implements SDSModuleIO {
     @Override
     public void setDriveVelocityRadPerSec(double velocityRadPerSec) {
         driveClosedLoop = true;
-        driveFFVolts = DriveConstants.driveSimKs * Math.signum(velocityRadPerSec) + DriveConstants.driveSimKv * velocityRadPerSec;
+        driveFFVolts = SwerveModuleConstants.driveSimKs * Math.signum(velocityRadPerSec) + SwerveModuleConstants.driveSimKv * velocityRadPerSec;
         driveController.setSetpoint(velocityRadPerSec);
     }
 

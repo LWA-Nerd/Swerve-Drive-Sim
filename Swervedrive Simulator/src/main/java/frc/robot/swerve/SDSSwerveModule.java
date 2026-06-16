@@ -1,5 +1,5 @@
 
-package frc.robot.subsystems.swerve;
+package frc.robot.swerve;
 
 import org.littletonrobotics.junction.Logger;
 
@@ -10,6 +10,7 @@ import edu.wpi.first.networktables.NetworkTable;
 import edu.wpi.first.networktables.NetworkTableInstance;
 import edu.wpi.first.wpilibj.Preferences;
 import frc.robot.Constants.SwerveModuleConstants;
+import frc.robot.swerve.SDSModuleIOInputsAutoLogged;
 
 public class SDSSwerveModule {
     public static final NetworkTable constantPreferences = NetworkTableInstance.getDefault().getTable("Swerve Modules");

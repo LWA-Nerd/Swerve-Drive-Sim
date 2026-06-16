@@ -1,4 +1,4 @@
-package frc.robot.subsystems.swerve;
+package frc.robot.swerve;
 
 import java.util.Arrays;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -7,6 +7,7 @@ import java.util.function.DoubleSupplier;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.LoggedRobot;
 import org.littletonrobotics.junction.Logger;
+import org.littletonrobotics.junction.networktables.LoggedNetworkNumber;
 
 import choreo.trajectory.SwerveSample;
 import edu.wpi.first.math.MathUtil;
@@ -34,6 +35,7 @@ import edu.wpi.first.wpilibj2.command.WaitCommand;
 import frc.robot.Constants;
 import frc.robot.Constants.FieldConstants;
 import frc.robot.Constants.SwerveConstants;
+import frc.robot.swerve.GyroIOInputsAutoLogged;
 
 public class SwerveDrive extends SubsystemBase {
     private final GyroIO gyroIO;
@@ -45,8 +47,6 @@ public class SwerveDrive extends SubsystemBase {
     private final SwerveDriveKinematics kinematics;
     private final SwerveDrivePoseEstimator poseEstimator;
 
-    private boolean toCrossbuck;
-    private boolean crossbuckOverride;
     private double lastMove;
 
     private final AtomicBoolean aimHubFlag;
@@ -59,6 +59,13 @@ public class SwerveDrive extends SubsystemBase {
 
     private final Field2d field;
 
+    private double joyX;
+    private double joyY;
+    private boolean posRotCtrl = false;
+
+
+    LoggedNetworkNumber speed = new LoggedNetworkNumber("hehe/Speed", 4.5);
+
     public SwerveDrive(
         GyroIO gyroIO,
         SDSModuleIO flModuleIO,
@@ -68,8 +75,6 @@ public class SwerveDrive extends SubsystemBase {
     ) {
         this.gyroIO = gyroIO;
         this.gyroIOInputs = new GyroIOInputsAutoLogged();
-
-        toCrossbuck = true;
 
         modules = new SDSSwerveModule[] {
             new SDSSwerveModule("Module 0", flModuleIO),
@@ -94,14 +99,22 @@ public class SwerveDrive extends SubsystemBase {
 
         trajVXController = new PIDController(8, 0, 0);
         trajVYController = new PIDController(8, 0, 0);
-        trajHeadingController = new PIDController(3, 0, 0);
+        trajHeadingController = new PIDController(4, 0, 0);
         trajHeadingController.enableContinuousInput(0, 2 * Math.PI);
 
         lastMove = Timer.getFPGATimestamp();
 
         field = new Field2d();
         SmartDashboard.putData("Odometry/Field", field);
+        
     }
+
+    public Command togglePos() {
+        return runOnce(() -> {
+            posRotCtrl = !posRotCtrl;
+        });
+    }
+
 
     private double adjustAxisInput(
         double controllerInput,
@@ -109,7 +122,6 @@ public class SwerveDrive extends SubsystemBase {
         double minThreshold,
         double steepness
     ) {
-        // see https://www.desmos.com/calculator/wj59z401tq
         
         return
             Math.abs(controllerInput) > deadband ?
@@ -141,12 +153,21 @@ public class SwerveDrive extends SubsystemBase {
         DoubleSupplier xInput,
         DoubleSupplier yInput,
         DoubleSupplier omegaInput,
+        DoubleSupplier imgOmegaInput,
         DoubleSupplier speedFactorInput
     ) {
         return run(() -> {
             double xInputValue = xInput.getAsDouble();
             double yInputValue = yInput.getAsDouble();
+
+            
+
+
             double omegaInputValue = omegaInput.getAsDouble();
+            double imgOmegaInputValue = imgOmegaInput.getAsDouble();
+            joyX = -omegaInputValue;
+            joyY = imgOmegaInputValue;
+            
 
             // see https://docs.wpilib.org/en/stable/docs/software/basic-programming/joystick.html#joystick-class
             yInputValue *= -1; // y-axis is inverted on joystick
@@ -167,7 +188,7 @@ public class SwerveDrive extends SubsystemBase {
             double steepness = 1.8; // more precision on lower values
             
             mag = adjustAxisInput(mag, deadband, minThreshold, steepness);
-            mag *= SwerveConstants.kMagVelLimit * speedFactor;
+            mag *= (DriverStation.isAutonomous() ? 4.5 : SwerveConstants.kMagVelLimit)  /*speed.getAsDouble()*/ * speedFactor;
             omega = adjustAxisInput(omega, deadband, minThreshold, steepness + 1);
             omega *= SwerveConstants.kRotVelLimit * speedFactor;
 
@@ -185,6 +206,11 @@ public class SwerveDrive extends SubsystemBase {
         Translation2d robotToHub = hubPose.getTranslation().minus(robotPose.getTranslation());
         Rotation2d targetHeading = robotToHub.getAngle().minus(Rotation2d.k180deg);
 
+        Translation2d rightJoy = new Translation2d(joyX, joyY);
+        Rotation2d joyHeading = rightJoy.getAngle().plus(Rotation2d.kCCW_90deg);
+        boolean posRot = (joyX * joyX + joyY * joyY) > 0.04;
+
+
         Logger.recordOutput("Swerve/AutoAlignTargetPose", new Pose2d(robotPose.getTranslation(), targetHeading));
         Logger.recordOutput("Swerve/DistanceToHub", robotToHub.getNorm());
         Logger.recordOutput("Field/HubPose", hubPose);
@@ -195,7 +221,13 @@ public class SwerveDrive extends SubsystemBase {
                 robotPose.getRotation().getRadians(),
                 targetHeading.getRadians()
             );
-        }
+        } else if (posRotCtrl && posRot) {
+		speeds.omegaRadiansPerSecond = trajHeadingController.calculate(
+			robotPose.getRotation().getRadians(),
+			joyHeading.getRadians()
+		);
+	}
+
     }
 
     private void submitChassisSpeeds(
@@ -209,14 +241,6 @@ public class SwerveDrive extends SubsystemBase {
             chassisSpeeds.omegaRadiansPerSecond != 0
         ) {
             lastMove = Timer.getFPGATimestamp();
-        }
-
-        if (
-            crossbuckOverride && DriverStation.isAutonomous() ||
-            (toCrossbuck && Timer.getFPGATimestamp() - lastMove > SwerveConstants.crossbuckDelaySeconds)
-        ) {
-            setModulesToCrossbuckPosition(true);
-            return;
         }
 
         ChassisSpeeds adjustedSpeeds = chassisSpeeds;
@@ -243,27 +267,6 @@ public class SwerveDrive extends SubsystemBase {
         for (int i = 0; i < 4; i++) {
             modules[i].setDesiredState(states[i], optimize);
         }
-    }
-
-    public Command setImmediateCrossbuckOverride(boolean on) {
-        return runOnce(() -> {
-            crossbuckOverride = on;
-        });
-    }
-
-    private void setModulesToCrossbuckPosition(boolean optimize) {
-        setRawModuleSetpoints(new SwerveModuleState[] {
-            new SwerveModuleState(0, Rotation2d.fromDegrees(45)),
-            new SwerveModuleState(0, Rotation2d.fromDegrees(-45)),
-            new SwerveModuleState(0, Rotation2d.fromDegrees(-45)),
-            new SwerveModuleState(0, Rotation2d.fromDegrees(45))
-        }, optimize);
-    }
-
-    public Command runToggleCrossbuckPosition() {
-        return runOnce(() -> {
-            toCrossbuck = !toCrossbuck;
-        });
     }
 
     public Command runXSetTime(double speedMult) {
@@ -305,20 +308,6 @@ public class SwerveDrive extends SubsystemBase {
             for (SDSSwerveModule module : modules) {
                 module.stopDrive();
             }
-        });
-    }
-
-    public Command runToggleAimHub(boolean on) {
-        return runOnce(() -> {
-            aimHubFlag.set(on);
-        });
-    }
-
-    public Command runOnlyAimHubBoomBoomBoomWowCommand() {
-        return run(() -> {
-            var cs = new ChassisSpeeds();
-            adjustSpeedsForPresetRotation(cs);
-            submitChassisSpeeds(cs, false, false);
         });
     }
 
@@ -396,8 +385,13 @@ public class SwerveDrive extends SubsystemBase {
 
     public void addVisionMeasurement(Pose2d visionMeasurement, double timestamp, Matrix<N3,N1> stdDevs) {
         // higher standard deviations means vision measurements are trusted less
+        Pose2d startPose2d = getPose();
+        System.out.println("start" + startPose2d.getX());
+        System.out.println("vision" + visionMeasurement.getX());
         poseEstimator.addVisionMeasurement(visionMeasurement, timestamp, stdDevs);
-        getPose();
+        System.out.println("end" + getPose().getX());
+        // getPose();
+        // System.out.println(visionMeasurement.getX());
     }
 
     /** function that tests module motor controllers by giving them a preset state */
@@ -426,7 +420,7 @@ public class SwerveDrive extends SubsystemBase {
     @Override
     public void periodic() {
         Logger.recordOutput("Swerve/AimHubFlag", aimHubFlag.get());
-        Logger.recordOutput("Swerve/CrossbuckEnabled", toCrossbuck);
+        Logger.recordOutput("WiWi", posRotCtrl);
 
         // updated all hardware inputs
         gyroIO.updateInputs(gyroIOInputs);
